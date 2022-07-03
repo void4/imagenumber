@@ -45,11 +45,11 @@ def r_index_get():
 			latest_file = max(userattempts, key=os.path.getctime)
 			latestdiff = compare(latest_file, f"targets/{target['name']}/target.png")["diff"]
 			#score = latestdiff*log(2+len(userattempts)+len(userattempts))
-			# "score": score, 
+			# "score": score,
 			target["scoreboard"].append({"name": os.path.split(userpath)[-1], "latestdiff": latestdiff, "attempts": len(userattempts)})
 
 		print(target)
-		target["scoreboard"] = list(sorted(target["scoreboard"], key=lambda sc: sc["score"]))
+		target["scoreboard"] = list(sorted(target["scoreboard"], key=lambda sc: sc["latestdiff"]))#score
 
 	return jsonify({"status": "ok", "targets": fulltargets})
 
