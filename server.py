@@ -10,6 +10,7 @@ from flask import Flask, jsonify, request
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
+app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
 
 paths = glob(f"targets/**/target.png")
 
