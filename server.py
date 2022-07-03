@@ -1,0 +1,91 @@
+from PIL import Image
+import os
+import numpy as np
+from glob import glob
+from flask import Flask, jsonify, request
+from werkzeug.utils import secure_filename
+from time import time
+from copy import deepcopy
+import imghdr
+from math import log
+
+app = Flask(__name__)
+
+paths = glob(f"targets/**/target.png")
+
+targets = [{"name": os.path.split(os.path.split(path)[-2])[-1], "shape": np.array(Image.open(path)).shape} for path in paths]
+
+def compare(path, target):
+
+	if target not in paths:
+		return {"status": "error", "errortext": f"Invalid target"}
+
+	target_img = Image.open(target)
+	original = np.array(target_img)
+
+	img = Image.open(path)
+	reconstructed = np.array(img)
+	
+	if original.shape != reconstructed.shape:
+		return {"status": "error", "errortext": f"Invalid image shape (need {original.shape})"}
+		
+	diff = np.sum(abs(reconstructed-original))/np.prod(original.shape)
+	print("error per pixel:", diff)
+	return {"status":"ok", "diff": diff}
+	
+@app.route("/", methods=["GET"])
+def r_index_get():
+
+	fulltargets = deepcopy(targets)
+	
+	for target in fulltargets:
+		target["scoreboard"] = []
+		for userpath in glob(f"targets/{target['name']}/attempts/*"):
+			userattempts = glob(os.path.join(userpath, "*.png"))
+			latest_file = max(userattempts, key=os.path.getctime)
+			latestdiff = compare(latest_file, f"targets/{target['name']}/target.png")["diff"]
+			target["scoreboard"].append({"name": os.path.split(userpath)[-1], "score": latestdiff*log(2+len(userattempts)+len(userattempts)), "latestdiff": latestdiff, "attempts": len(userattempts)})
+	
+		print(target)
+		target["scoreboard"] = list(sorted(target["scoreboard"], key=lambda sc: sc["score"]))
+
+	return jsonify({"status": "ok", "targets": fulltargets})
+
+@app.route("/", methods=["POST"])
+def r_index_post():
+	if "image" not in request.files:
+		return jsonify({"status": "error", "errortext": "Missing file 'image'"})
+	if len(request.files) > 1:
+		return jsonify({"status": "error", "errortext": "Too many images (just upload one)"})
+
+	f = request.files["image"]
+	
+	if not f.filename.endswith(".png"):
+		return jsonify({"status": "error", "errortext": "Invalid filetype, not .png"})
+	
+	target = secure_filename(str(request.values.get("target", "1")))
+	print(request.values.get("target"))
+	
+	if target not in [t["name"] for t in targets]:
+		return jsonify({"status": "error", "errortext": "Invalid target, must be one of", "targets": targets})
+	
+	name = secure_filename(request.values.get("name", "anon"))
+	namepath = os.path.join("targets", target, "attempts", name)
+	
+	os.makedirs(namepath, exist_ok=True)
+	
+	attemptpath = os.path.join(namepath, str(int(time()*1000))+".png")
+	
+	f.save(attemptpath)
+	#print(f, dir(f))
+	
+	if imghdr.what(attemptpath) != "png":
+		return jsonify({"status": "error", "errortext": "Invalid filetype, not .png"})
+	
+	return jsonify(compare(attemptpath, os.path.join("targets", target, "target.png")))
+
+HOST = "0.0.0.0"
+PORT = 1236
+DEBUG = True
+
+app.run(HOST, PORT, debug=DEBUG)
