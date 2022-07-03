@@ -8,7 +8,6 @@ import numpy as np
 from PIL import Image
 from flask import Flask, jsonify, request
 from werkzeug.utils import secure_filename
-import imghdr
 
 app = Flask(__name__)
 
@@ -79,9 +78,6 @@ def r_index_post():
 
 	f.save(attemptpath)
 	#print(f, dir(f))
-
-	if imghdr.what(attemptpath) != "png":
-		return jsonify({"status": "error", "errortext": "Invalid filetype, not .png"})
 
 	return jsonify(compare(attemptpath, os.path.join("targets", target, "target.png")))
 
