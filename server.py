@@ -83,6 +83,6 @@ def r_index_post():
 
 HOST = "0.0.0.0"
 PORT = 1236
-DEBUG = True
+DEBUG = os.getcwd().startswith("/home/zero")
 
 app.run(HOST, PORT, debug=DEBUG)
