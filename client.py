@@ -5,9 +5,12 @@ import numpy as np
 from PIL import Image
 
 NAME = "anon"
+PASSWORD = None#"12345"
 
-HOST = "randomcorrelations.com"
-URL = f"https://{HOST}/"
+PROTOCOL = "https"#http
+HOST = "randomcorrelations.com"#"0.0.0.0"
+PORT = 443#1236
+URL = f"{PROTOCOL}://{HOST}:{PORT}/"
 
 targets = requests.get(URL).json()["targets"]
 
@@ -18,7 +21,7 @@ def send(arr):
 	img = Image.fromarray(arr)
 	img.save("image.png")
 
-	data = {"name": NAME, "target": target["name"]}
+	data = {"name": NAME, "password": PASSWORD, "target": target["name"]}
 	files = {"image": open("image.png", "rb")}
 
 	response = requests.post(URL, data=data, files=files)
@@ -49,7 +52,7 @@ while True:
 
 	arr[y][x] = [255,255,255]
 	whitediff = send(arr)
-	print(whitediff, blackdiff)
+	#print(whitediff, blackdiff)
 
 	if whitediff < blackdiff:
 		arr[y][x] = [255,255,255]
