@@ -1,7 +1,8 @@
+from time import sleep
 import requests
+
 import numpy as np
 from PIL import Image
-from time import sleep
 
 NAME = "anon"
 
@@ -37,19 +38,19 @@ x = 0
 y = 0
 
 while True:
-	
+
 	# modify arr here
 
 	# Example: change every pixel to black or white individually
 	# very slow, requires many attempts, and will therefore yield a bad score
-	
+
 	arr[y][x] = [0,0,0]
 	blackdiff = send(arr)
-	
+
 	arr[y][x] = [255,255,255]
 	whitediff = send(arr)
 	print(whitediff, blackdiff)
-	
+
 	if whitediff < blackdiff:
 		arr[y][x] = [255,255,255]
 		diff = whitediff
@@ -62,11 +63,11 @@ while True:
 		y += 1
 	else:
 		x += 1
-	
+
 	if y == h-1:
 		break
 
 	print(x, y, "average difference per pixel:", diff)
-	
+
 	# not too fast please
 	sleep(0.01)

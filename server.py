@@ -1,13 +1,14 @@
-from PIL import Image
 import os
-import numpy as np
+from math import log
 from glob import glob
-from flask import Flask, jsonify, request
-from werkzeug.utils import secure_filename
 from time import time
 from copy import deepcopy
+
+import numpy as np
+from PIL import Image
+from flask import Flask, jsonify, request
+from werkzeug.utils import secure_filename
 import imghdr
-from math import log
 
 app = Flask(__name__)
 
@@ -25,19 +26,19 @@ def compare(path, target):
 
 	img = Image.open(path)
 	reconstructed = np.array(img)
-	
+
 	if original.shape != reconstructed.shape:
 		return {"status": "error", "errortext": f"Invalid image shape (need {original.shape})"}
-		
+
 	diff = np.sum(abs(reconstructed-original))/np.prod(original.shape)
 	print("error per pixel:", diff)
 	return {"status":"ok", "diff": diff}
-	
+
 @app.route("/", methods=["GET"])
 def r_index_get():
 
 	fulltargets = deepcopy(targets)
-	
+
 	for target in fulltargets:
 		target["scoreboard"] = []
 		for userpath in glob(f"targets/{target['name']}/attempts/*"):
@@ -45,7 +46,7 @@ def r_index_get():
 			latest_file = max(userattempts, key=os.path.getctime)
 			latestdiff = compare(latest_file, f"targets/{target['name']}/target.png")["diff"]
 			target["scoreboard"].append({"name": os.path.split(userpath)[-1], "score": latestdiff*log(2+len(userattempts)+len(userattempts)), "latestdiff": latestdiff, "attempts": len(userattempts)})
-	
+
 		print(target)
 		target["scoreboard"] = list(sorted(target["scoreboard"], key=lambda sc: sc["score"]))
 
@@ -59,29 +60,29 @@ def r_index_post():
 		return jsonify({"status": "error", "errortext": "Too many images (just upload one)"})
 
 	f = request.files["image"]
-	
+
 	if not f.filename.endswith(".png"):
 		return jsonify({"status": "error", "errortext": "Invalid filetype, not .png"})
-	
+
 	target = secure_filename(str(request.values.get("target", "1")))
 	print(request.values.get("target"))
-	
+
 	if target not in [t["name"] for t in targets]:
 		return jsonify({"status": "error", "errortext": "Invalid target, must be one of", "targets": targets})
-	
+
 	name = secure_filename(request.values.get("name", "anon"))
 	namepath = os.path.join("targets", target, "attempts", name)
-	
+
 	os.makedirs(namepath, exist_ok=True)
-	
+
 	attemptpath = os.path.join(namepath, str(int(time()*1000))+".png")
-	
+
 	f.save(attemptpath)
 	#print(f, dir(f))
-	
+
 	if imghdr.what(attemptpath) != "png":
 		return jsonify({"status": "error", "errortext": "Invalid filetype, not .png"})
-	
+
 	return jsonify(compare(attemptpath, os.path.join("targets", target, "target.png")))
 
 HOST = "0.0.0.0"
