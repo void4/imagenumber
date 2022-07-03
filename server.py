@@ -41,13 +41,14 @@ def r_index_get():
 	for target in fulltargets:
 		target["scoreboard"] = []
 		for userpath in glob(f"targets/{target['name']}/attempts/*"):
-			userattempts = glob(os.path.join(userpath, "*.png"))
-			if len(userattempts):
-				latest_file = max(userattempts, key=os.path.getctime)
-				latestdiff = compare(latest_file, f"targets/{target['name']}/target.png")["diff"]
-				#score = latestdiff*log(2+len(userattempts)+len(userattempts))
-				# "score": score,
-				target["scoreboard"].append({"name": os.path.split(userpath)[-1], "latestdiff": latestdiff, "attempts": len(userattempts)})
+			for run in glob(userpath+"/*/"):
+				userattempts = glob(os.path.join(userpath, run, "*.png"))
+				if len(userattempts):
+					latest_file = max(userattempts, key=os.path.getctime)
+					latestdiff = compare(latest_file, f"targets/{target['name']}/target.png")["diff"]
+					#score = latestdiff*log(2+len(userattempts)+len(userattempts))
+					# "score": score,
+					target["scoreboard"].append({"name": os.path.split(userpath)[-1], "run": run, "latestdiff": latestdiff, "attempts": len(userattempts)})
 
 		print(target)
 		target["scoreboard"] = list(sorted(target["scoreboard"], key=lambda sc: sc["latestdiff"]))#score
@@ -77,19 +78,26 @@ def r_index_post():
 
 	os.makedirs(namepath, exist_ok=True)
 
-	password = request.values.get("password")
-	passwordpath = os.path.join(namepath, "password")
+	if name != "anon":
 
-	if os.path.exists(passwordpath):
-		with open(passwordpath) as pwfile:
-			if pwfile.read() != password:
-				return jsonify({"status": "error", "errortext": "Invalid password"})
+		password = request.values.get("password")
+		passwordpath = os.path.join(namepath, "password")
 
-	elif password is not None:
-		with open(passwordpath, "w+") as pwfile:
-			pwfile.write(password)
+		if os.path.exists(passwordpath):
+			with open(passwordpath) as pwfile:
+				if pwfile.read() != password:
+					return jsonify({"status": "error", "errortext": "Invalid password"})
 
-	attemptpath = os.path.join(namepath, str(int(time()*1000))+".png")
+		elif password is not None:
+			with open(passwordpath, "w+") as pwfile:
+				pwfile.write(password)
+
+	runname = secure_filename(request.values.get("run", "test"))
+
+	runpath = os.path.join(namepath, runname)
+	os.makedirs(runpath, exist_ok=True)
+
+	attemptpath = os.path.join(runpath, str(int(time()*1000))+".png")
 
 	f.save(attemptpath)
 	#print(f, dir(f))

@@ -5,11 +5,13 @@ import numpy as np
 from PIL import Image
 
 NAME = "anon"
+RUNNAME = "test"
 PASSWORD = None#"12345"
 
-PROTOCOL = "https"#http
-HOST = "randomcorrelations.com"#"0.0.0.0"
-PORT = 443#1236
+TESTLOCAL = False
+
+PROTOCOL, HOST, PORT = ("https", "randomcorrelations.com", 443) if not TESTLOCAL else ("http", "0.0.0.0", 1236)
+
 URL = f"{PROTOCOL}://{HOST}:{PORT}/"
 
 targets = requests.get(URL).json()["targets"]
@@ -21,7 +23,7 @@ def send(arr):
 	img = Image.fromarray(arr)
 	img.save("image.png")
 
-	data = {"name": NAME, "password": PASSWORD, "target": target["name"]}
+	data = {"name": NAME, "password": PASSWORD, "run": RUNNAME, "target": target["name"]}
 	files = {"image": open("image.png", "rb")}
 
 	response = requests.post(URL, data=data, files=files)
